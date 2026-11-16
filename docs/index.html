@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Green IT - Data Center Efficiency</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    :root { --ink:#10251b; --muted:#667085; --green:#15803d; --light:#ecfdf3; --amber:#f59e0b; --border:#dbe5df; }
+    * { box-sizing:border-box; } body { margin:0; background:#f7faf8; color:var(--ink); font:15px/1.45 Inter,system-ui,-apple-system,Segoe UI,sans-serif; }
+    header { padding:42px max(24px,calc((100% - 1180px)/2)); color:white; background:linear-gradient(120deg,#0b3d24,#166534 55%,#1f8b4c); }
+    h1 { margin:0; font-size:clamp(28px,4vw,44px); letter-spacing:-1.4px; } header p { margin:10px 0 0; max-width:730px; color:#d7f9e3; font-size:17px; }
+    main { max-width:1180px; padding:28px 20px 58px; margin:auto; } h2 { margin:28px 0 12px; font-size:20px; } .panel { padding:20px; background:white; border:1px solid var(--border); border-radius:14px; box-shadow:0 8px 22px rgba(9,46,26,.05); }
+    .inputs { display:grid; grid-template-columns:repeat(5,minmax(135px,1fr)); gap:14px; } label { font-weight:650; font-size:13px; color:#344054; } input,select { width:100%; margin-top:6px; padding:10px; border:1px solid #cbd5d0; border-radius:8px; font:inherit; } button { margin-top:20px; padding:11px 18px; border:0; border-radius:8px; color:white; background:var(--green); font-weight:700; cursor:pointer; }
+    .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:18px; } .metric { padding:17px; background:white; border:1px solid var(--border); border-radius:12px; } .metric small { display:block; color:var(--muted); font-weight:650; } .metric strong { display:block; margin-top:5px; font-size:27px; }
+    .charts { display:grid; grid-template-columns:1fr 1fr; gap:18px; } .plot { height:335px; } .wide { height:330px; } .notice { margin-top:16px; padding:13px 15px; border-left:4px solid var(--green); background:var(--light); border-radius:8px; }
+    .planner { display:grid; grid-template-columns:1fr 1.6fr; gap:20px; align-items:center; } .planner-output { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; } .planner-output div { background:#f8faf9; padding:14px; border-radius:10px; } .planner-output b { display:block; font-size:21px; color:var(--green); }
+    footer { text-align:center; color:var(--muted); padding:30px 20px; } @media(max-width:820px) { .inputs,.metrics,.charts,.planner { grid-template-columns:1fr; } .planner-output { grid-template-columns:1fr 1fr 1fr; } }
+  </style>
+</head>
+<body>
+  <header><h1>Green IT: Data Center Efficiency</h1><p>Interactive Power Usage Effectiveness analysis for energy, cost, and carbon-aware operations.</p></header>
+  <main>
+    <section class="panel"><h2 style="margin-top:0">Your measurement</h2><div class="inputs">
+      <label>Period<select id="period"><option>Monthly</option><option>Quarterly</option><option>Annual</option></select></label>
+      <label>Total facility energy (kWh)<input id="facility" type="number" min="1" value="1000"></label>
+      <label>IT equipment energy (kWh)<input id="it" type="number" min="1" value="600"></label>
+      <label>Electricity rate (per kWh)<input id="rate" type="number" min="0" step="0.5" value="8"></label>
+      <label>Carbon factor (kg CO2e/kWh)<input id="carbon" type="number" min="0" step="0.05" value="0.70"></label>
+    </div><button id="calculate">Calculate efficiency</button><div id="message" class="notice">Enter a consistent measurement period, then calculate the efficiency snapshot.</div></section>
+    <section class="metrics"><div class="metric"><small>Power Usage Effectiveness</small><strong id="pue">1.67</strong></div><div class="metric"><small>DCiE</small><strong id="dcie">60.0%</strong></div><div class="metric"><small>Non-IT overhead</small><strong id="overhead">400 kWh</strong></div><div class="metric"><small>IT energy share</small><strong id="itshare">60.0%</strong></div></section>
+    <h2>Operations monitoring</h2><section class="charts"><div class="panel"><div id="gauge" class="plot"></div></div><div class="panel"><div id="donut" class="plot"></div></div><div class="panel"><div id="trend" class="plot"></div></div><div class="panel"><div id="scenario" class="plot"></div></div></section>
+    <section class="panel" style="margin-top:18px"><div id="heatmap" class="wide"></div></section>
+    <h2>Improvement planner</h2><section class="panel planner"><div><label>Target PUE <input id="target" type="range" min="1.05" max="2.5" value="1.25" step="0.05"></label><p id="target-label"><b>Target: 1.25</b><br>Lower PUE means less facility energy for the same IT workload.</p></div><div class="planner-output"><div><small>Potential energy reduction</small><b id="saving-energy">250 kWh</b></div><div><small>Potential cost reduction</small><b id="saving-cost">2,000</b></div><div><small>Potential carbon reduction</small><b id="saving-carbon">175 kg</b></div></div></section>
+  </main><footer>Green IT Data Center Efficiency Dashboard - GitHub Pages interactive demo</footer>
+  <script>
+    const $ = id => document.getElementById(id); const fmt = n => new Intl.NumberFormat().format(Math.round(n));
+    const base = {font:{family:'Inter,system-ui,sans-serif',color:'#10251b'},paper_bgcolor:'white',plot_bgcolor:'white',margin:{l:40,r:20,t:48,b:40}};
+    function draw() {
+      const facility=Number($('facility').value), it=Number($('it').value), rate=Number($('rate').value), carbon=Number($('carbon').value), target=Number($('target').value);
+      if (!facility || !it || it>facility) { $('message').textContent='IT equipment energy must be greater than zero and cannot exceed total facility energy.'; return; }
+      const overhead=facility-it, pue=facility/it, dcie=it/facility*100, targetEnergy=it*target, saved=Math.max(facility-targetEnergy,0);
+      $('pue').textContent=pue.toFixed(2); $('dcie').textContent=dcie.toFixed(1)+'%'; $('overhead').textContent=fmt(overhead)+' kWh'; $('itshare').textContent=dcie.toFixed(1)+'%';
+      $('target-label').innerHTML='<b>Target: '+target.toFixed(2)+'</b><br>Lower PUE means less facility energy for the same IT workload.'; $('saving-energy').textContent=fmt(saved)+' kWh'; $('saving-cost').textContent=fmt(saved*rate); $('saving-carbon').textContent=fmt(saved*carbon)+' kg';
+      $('message').textContent=(pue<=1.5?'Good efficiency.':'Improvement opportunity.')+' Current PUE is '+pue.toFixed(2)+'. Focus on cooling and power-distribution overhead.';
+      Plotly.react('gauge',[{type:'indicator',mode:'gauge+number',value:pue,title:{text:'Current PUE'},number:{valueformat:'.2f'},gauge:{axis:{range:[1,2.5]},bar:{color:'#15803d'},steps:[{range:[1,1.5],color:'#dcfce7'},{range:[1.5,2],color:'#fef3c7'},{range:[2,2.5],color:'#fee2e2'}],threshold:{line:{color:'#dc2626',width:4},value:2}}}],{...base,margin:{l:35,r:35,t:55,b:25}});
+      Plotly.react('donut',[{type:'pie',labels:['IT equipment','Non-IT overhead'],values:[it,overhead],hole:.58,marker:{colors:['#15803d','#f59e0b']},textinfo:'label+percent'}],{...base,title:'Energy breakdown',showlegend:false});
+      const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], factors=[1.02,1.05,1.01,1.04,1,.91,.88], f=facility/30, i=it/30;
+      Plotly.react('trend',[{x:days,y:factors.map(x=>f*x),name:'Facility energy',mode:'lines+markers',line:{color:'#f59e0b',width:3}},{x:days,y:factors.map(x=>i*x),name:'IT energy',mode:'lines+markers',line:{color:'#15803d',width:3}}],{...base,title:'Seven-day energy trend',yaxis:{title:'kWh'},legend:{orientation:'h',y:1.15}});
+      Plotly.react('scenario',[{x:['Legacy','Baseline','Optimized'],y:[it,it,it],name:'IT energy',type:'bar',marker:{color:'#15803d'}},{x:['Legacy','Baseline','Optimized'],y:[overhead,overhead*.75,overhead*.38],name:'Non-IT energy',type:'bar',marker:{color:'#f59e0b'}}],{...base,title:'Scenario comparison',barmode:'stack',yaxis:{title:'kWh'},legend:{orientation:'h',y:1.15}});
+      const hours=[...Array(24).keys()], profile=[.76,.73,.71,.70,.71,.75,.84,.94,1.02,1.07,1.10,1.11,1.12,1.10,1.08,1.06,1.04,1.08,1.12,1.09,1,.91,.84,.79];
+      Plotly.react('heatmap',[{type:'heatmap',x:hours.map(h=>String(h).padStart(2,'0')+':00'),y:days,z:factors.map(x=>profile.map(p=>f*x*p/24)),colorscale:'YlGnBu',colorbar:{title:'kWh'}}],{...base,title:'Hourly facility-load heatmap',xaxis:{title:'Hour of day'},yaxis:{title:'Day'}});
+    }
+    ['facility','it','rate','carbon','target'].forEach(id=>$(id).addEventListener('input',draw)); $('calculate').addEventListener('click',draw); draw();
+  </script>
+</body></html>
