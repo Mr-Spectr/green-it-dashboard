@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: green-it-dashboard
+    runtime: docker
+    plan: free
+    healthCheckPath: /
