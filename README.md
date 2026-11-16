@@ -98,7 +98,7 @@ The repository includes a `Dockerfile` and `render.yaml` for a straightforward p
 3. Select the GitHub repository and approve the generated service.
 4. After the build completes, Render provides the public URL. Add that URL below.
 
-**Live demo:** https://mr-spectr.github.io/green-it-dashboard/
+**Live demo:** Deployment pending. The GitHub Pages workflow is included in this repository and publishes the interactive browser demo when GitHub Actions is available for the account.
 
 ## Data note
 
